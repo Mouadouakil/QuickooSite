@@ -1,0 +1,28 @@
+a.notify,
+.drop-content li.row div a {
+    color: #e85f03;
+}
+
+.proile-rating {
+    font-size: 0.75em;
+    color: #818182;
+}
+
+.proile-rating span {
+    color: #495057;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.nbrNotify {
+    border-radius: 50%;
+    position: relative;
+    width: 15px;
+    background-color: #e85f03;
+    height: 15px;
+    color: #ffffff;
+    text-align: center;
+    font-size: 0.75em;
+    top: 18px;
+    left: 15px;
+}
