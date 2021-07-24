@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class FactureController extends Controller
 {
-       /**
+    /**
      * Create a new controller instance.
      *
      * @return void
@@ -23,7 +23,7 @@ class FactureController extends Controller
     {
         $this->middleware('auth');
     }
-    
+
     /**
      * Display a listing of the resource.
      *
@@ -33,26 +33,30 @@ class FactureController extends Controller
     {
         $clients = []; //tableau des clients existe dans la base de données
         $users = []; //les users qui seront affichés avec leur bon de livraison
-        if(!Gate::denies('ramassage-commande')) {
+        if (!Gate::denies('ramassage-commande')) {
             $factures = DB::table('factures')->orderBy('created_at', 'DESC')->get();
-            $clients = User::whereHas('roles', function($q){$q->whereIn('name', ['client', 'ecom']);})->get();        }
-        else{
-            $factures = DB::table('factures')->where('user_id',Auth::user()->id)->orderBy('created_at', 'DESC')->get();
+            $clients = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['client', 'ecom']);
+            })->get();
+        } else {
+            $factures = DB::table('factures')->where('user_id', Auth::user()->id)->orderBy('created_at', 'DESC')->get();
         }
 
-        foreach($factures as $facture){
-            if(!empty(User::find($facture->user_id)))
-            $users[] =  User::find($facture->user_id) ;
+        foreach ($factures as $facture) {
+            if (!empty(User::find($facture->user_id)))
+                $users[] =  User::find($facture->user_id);
         }
         $total = $factures->count();
         //dd($users);
-        return view('facture',['factures'=>$factures ,
-                                        'total' => $total,
-                                         'users'=> $users,
-                                         'clients' => $clients]);
+        return view('facture', [
+            'factures' => $factures,
+            'total' => $total,
+            'users' => $users,
+            'clients' => $clients
+        ]);
     }
 
-    
+
     /**
      * Store a newly created resource in storage.
      *
@@ -62,40 +66,76 @@ class FactureController extends Controller
     public function store(Request $request)
     {
         $user = $request->client;
-        if(!Gate::denies('ramassage-commande')) {
-        $nbrCmdLivre =  DB::table('commandes')->where('statut','Livré')->where('user_id',$user)->where('facturer','0')->count();
-        $nbrCmdRamasse =  DB::table('commandes')->where('statut','En cours')->where('user_id',$user)->where('facturer','0')->count();
+        if (!Gate::denies('ramassage-commande')) {
+            $nbrCmdLivre =  DB::table('commandes')->where('statut', 'Livré')->where('user_id', $user)->where('facturer', '0')->count();
+            $nbrCmdRamasse =  DB::table('commandes')->where('statut', 'En cours')->where('user_id', $user)->where('facturer', '0')->count();
 
-        if($nbrCmdLivre == 0){ 
-           
-                $request->session()->flash('nbrCmdRamasse' , $nbrCmdRamasse);
-            
-        }
-        else{
-            $facture = new Facture();
-            $facture->numero = 'FAC_'.date("mdis");
-            $facture->colis = DB::table('commandes')->where('user_id',$user)->whereIn('statut', ['Retour Complet', 'Retour Partiel'])->where('facturer','0')->sum('colis');
-            $facture->livre = $nbrCmdLivre;
-            $facture->prix = DB::table('commandes')->where('user_id',$user)->where('statut','Livré')->where('facturer','0')->sum('prix');
-            $facture->montant = DB::table('commandes')->where('user_id',$user)->where('statut','Livré')->where('facturer','0')->sum('montant');
-            $facture->commande = DB::table('commandes')->where('user_id',$user)->whereIn('statut', ['Retour Complet', 'Retour Partiel'])->where('facturer','0')->count(); //nbr de commanddes non livrée
-            $facture->user()->associate($user)->save();
-            $affected = DB::table('commandes')->where('user_id',$user)->whereIn('statut', ['Livré', 'Retour Complet', 'Retour Partiel'])->where('facturer', '=', '0')->update(array('facturer' => $facture->id));
+            if ($nbrCmdLivre == 0) {
 
-            $request->session()->flash('ajoute');
-        }
+                $request->session()->flash('nbrCmdRamasse', $nbrCmdRamasse);
+            } else {
+                $facture = new Facture();
+                $facture->numero = 'FAC_' . date("mdis");
+                $facture->colis = DB::table('commandes')->where('user_id', $user)->whereIn('statut', ['Retour Complet', 'Retour Partiel'])->where('facturer', '0')->sum('colis');
+                $facture->livre = $nbrCmdLivre;
+                $facture->prix = DB::table('commandes')->where('user_id', $user)->where('statut', 'Livré')->where('facturer', '0')->sum('prix');
+                $facture->montant = DB::table('commandes')->where('user_id', $user)->where('statut', 'Livré')->where('facturer', '0')->sum('montant');
+                $facture->commande = DB::table('commandes')->where('user_id', $user)->whereIn('statut', ['Retour Complet', 'Retour Partiel'])->where('facturer', '0')->count(); //nbr de commanddes non livrée
+                $facture->user()->associate($user)->save();
+                $affected = DB::table('commandes')->where('user_id', $user)->whereIn('statut', ['Livré', 'Retour Complet', 'Retour Partiel'])->where('facturer', '=', '0')->update(array('facturer' => $facture->id));
 
-        }//rammsage-commande
+                $request->session()->flash('ajoute');
+            }
+        } //rammsage-commande
         return redirect(route('facture.index'));
-    }//fin fonction ajouter facture
+    } //fin fonction ajouter facture
+
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function storeBySelect(Request $request)
+    {
+
+        dd(count($request->btSelectItem));
+
+
+        $user = $request->client;
+        if (!Gate::denies('ramassage-commande')) {
+            $nbrCmdLivre =  DB::table('commandes')->where('statut', 'Livré')->where('user_id', $user)->where('facturer', '0')->count();
+            $nbrCmdRamasse =  DB::table('commandes')->where('statut', 'En cours')->where('user_id', $user)->where('facturer', '0')->count();
+
+            if ($nbrCmdLivre == 0) {
+
+                $request->session()->flash('nbrCmdRamasse', $nbrCmdRamasse);
+            } else {
+                $facture = new Facture();
+                $facture->numero = 'FAC_' . date("mdis");
+                $facture->colis = DB::table('commandes')->where('user_id', $user)->whereIn('statut', ['Retour Complet', 'Retour Partiel'])->where('facturer', '0')->sum('colis');
+                $facture->livre = $nbrCmdLivre;
+                $facture->prix = DB::table('commandes')->where('user_id', $user)->where('statut', 'Livré')->where('facturer', '0')->sum('prix');
+                $facture->montant = DB::table('commandes')->where('user_id', $user)->where('statut', 'Livré')->where('facturer', '0')->sum('montant');
+                $facture->commande = DB::table('commandes')->where('user_id', $user)->whereIn('statut', ['Retour Complet', 'Retour Partiel'])->where('facturer', '0')->count(); //nbr de commanddes non livrée
+                $facture->user()->associate($user)->save();
+                $affected = DB::table('commandes')->where('user_id', $user)->whereIn('statut', ['Livré', 'Retour Complet', 'Retour Partiel'])->where('facturer', '=', '0')->update(array('facturer' => $facture->id));
+
+                $request->session()->flash('ajoute');
+            }
+        } //rammsage-commande
+        return redirect(route('facture.index'));
+    } //fin fonction ajouter facture
 
 
 
-    public function commandes(Facture $facture, $n , $i){
+    public function commandes(Facture $facture, $n, $i)
+    {
         $user = $facture->user_id;
-        $commandes = DB::table('commandes')->where('user_id',$user)->where('statut','livré')->where('facturer',$facture->id)->get();
-        $content = 
-        '
+        $commandes = DB::table('commandes')->where('user_id', $user)->where('statut', 'livré')->where('facturer', $facture->id)->get();
+        $content =
+            '
         <div class="invoice">
              <table id="customers">
                  <tr>
@@ -110,48 +150,47 @@ class FactureController extends Controller
         ';
         foreach ($commandes as $index => $commande) {
 
-            if(($index >= $i * 8) && ($index < 8*($i+1))) { //les infromations de la table depe,d de la page actuelle
-            $statut = DB::table('statuts')->where('commande_id',$commande->id)->where('name','livré')->get()->first();
-            if($commande->montant == 0){
-                $montant = "Payée Par CB";
-            }
-            else{
-                $montant = $commande->montant;
-            } 
-            $content .= '<tr>'.'
-            <td>'.$commande->numero.'</td>
-            <td>'.$commande->nom.'</td>
-            <td>'.$commande->ville.'</td>
-            <td>'.$commande->telephone.'</td>
-            <td>'.$montant.'</td>
-            <td>'.$commande->prix.'</td>
-            <td>'.$statut->created_at.'</td>
-            '.'</tr>' ;
+            if (($index >= $i * 8) && ($index < 8 * ($i + 1))) { //les infromations de la table depe,d de la page actuelle
+                $statut = DB::table('statuts')->where('commande_id', $commande->id)->where('name', 'livré')->get()->first();
+                if ($commande->montant == 0) {
+                    $montant = "Payée Par CB";
+                } else {
+                    $montant = $commande->montant;
                 }
+                $content .= '<tr>' . '
+            <td>' . $commande->numero . '</td>
+            <td>' . $commande->nom . '</td>
+            <td>' . $commande->ville . '</td>
+            <td>' . $commande->telephone . '</td>
+            <td>' . $montant . '</td>
+            <td>' . $commande->prix . '</td>
+            <td>' . $statut->created_at . '</td>
+            ' . '</tr>';
             }
-        return $content .'</table>  </div>';
-       
+        }
+        return $content . '</table>  </div>';
     }
 
-     //fonction qui renvoie le contenue du bon de livraison
+    //fonction qui renvoie le contenue du bon de livraison
 
-    public function content(Facture $facture, $n , $i){
+    public function content(Facture $facture, $n, $i)
+    {
         $user = $facture->user_id;
         $user = DB::table('users')->find($user);
-        
+
         //les information du fournisseur (en-tete)
         $info_client = '
             <div class="info_client">
-                <h1>'.$user->name.'</h1>
-                <h3>ADRESSE : '.$user->adresse.'</h3>
-                <h3>TELEPHONE : '.$user->telephone.'</h3>
-                <h3>VILLE : '.$user->ville.'</h3>
-                <h3>ICE: '.$user->description.'</h3>
+                <h1>' . $user->name . '</h1>
+                <h3>ADRESSE : ' . $user->adresse . '</h3>
+                <h3>TELEPHONE : ' . $user->telephone . '</h3>
+                <h3>VILLE : ' . $user->ville . '</h3>
+                <h3>ICE: ' . $user->description . '</h3>
             </div>
             <div class="date_num">
-                <h3>'.$facture->numero.'</h3>
-                <h3>'.$facture->created_at.'</h3>
-                
+                <h3>' . $facture->numero . '</h3>
+                <h3>' . $facture->created_at . '</h3>
+
 
             </div>
         ';
@@ -159,49 +198,50 @@ class FactureController extends Controller
         $total = '
             <div class="total">
             <table id="customers">
-                
+
             <tr>
             <th>TOTAL NET : </th>
-            <td>'.$facture->montant.'  MAD</td>
+            <td>' . $facture->montant . '  MAD</td>
             </tr>
             </table>
             </div>
             ';
 
-           
-       $content = $this->commandes($facture, $n , $i);
-        $content = $info_client.$content;
-        if($n == ($i+1)){ //le total seulement dans la derniere page (n est le nbr de page / i et la page actuelle)
-            $content .= $total ;
+
+        $content = $this->commandes($facture, $n, $i);
+        $content = $info_client . $content;
+        if ($n == ($i + 1)) { //le total seulement dans la derniere page (n est le nbr de page / i et la page actuelle)
+            $content .= $total;
         }
-       return $content ;
+        return $content;
     }
 
 
-    public function gen($id){
-        
+    public function gen($id)
+    {
+
         $facture = Facture::findOrFail($id);
         $user = $facture->user_id;
 
-        if($user !== Auth::user()->id && Gate::denies('ramassage-commande')){
+        if ($user !== Auth::user()->id && Gate::denies('ramassage-commande')) {
             return redirect()->route('facture.index');
         }
         $user = DB::table('users')->find($user);
         //dd($facture->id);
         $pdf = \App::make('dompdf.wrapper');
 
-        $style =' 
+        $style = '
         <!doctype html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
-            <title>Facture_'.$facture->numero.'</title>
+            <title>Facture_' . $facture->numero . '</title>
 
             <style type="text/css">
             @page {
                 margin: 0px;
             }
-            
+
                 body{
                     margin: 0px;
                     background-image: url("https://i.ibb.co/4WmzVtW/facture.png");
@@ -234,7 +274,7 @@ class FactureController extends Controller
                    margin : 8px;
                     position: relative;
                     min-height: auto;
-                    
+
                 }
                 #customers {
                     border-collapse: collapse;
@@ -258,103 +298,110 @@ class FactureController extends Controller
                     color: white;
                     }
                 </style>
-            
+
             </head>
             <body>
         ';
-        $m = (($facture->livre )/ 8) ;
+        $m = (($facture->livre) / 8);
         $n = (int)$m; // nombre de page
-        if($n != $m){$n++;}
+        if ($n != $m) {
+            $n++;
+        }
         //dd($n);
         $content = '';
-        for ($i=0; $i<$n ; $i++) { 
-            $content .= $this->content($facture , $n , $i);
+        for ($i = 0; $i < $n; $i++) {
+            $content .= $this->content($facture, $n, $i);
         }
-        
-        $content = $style.$content.' </body></html>' ;
+
+        $content = $style . $content . ' </body></html>';
 
         //dd($this->content($facture));
-        $pdf -> loadHTML($content)->setPaper('A4');
+        $pdf->loadHTML($content)->setPaper('A4');
 
 
-        return $pdf->stream('Facture_'.$facture->numero.'pdf');
+        return $pdf->stream('Facture_' . $facture->numero . 'pdf');
     }
 
- 
-    public function search($id){
+
+    public function search($id)
+    {
         //dd(Auth::user()->id );
         $data = null;
-        $clients = User::whereHas('roles', function($q){$q->whereIn('name', ['client', 'ecom']);})->get();
-        $users = [] ;
+        $clients = User::whereHas('roles', function ($q) {
+            $q->whereIn('name', ['client', 'ecom']);
+        })->get();
+        $users = [];
         $produits = [];
 
-        if(!Gate::denies('ecom')){
-            $produits_total = Produit::where('user_id',Auth::user()->id)->get();
-            foreach($produits_total as $produit){
-                $stock = DB::table('stocks')->where('produit_id',$produit->id)->get();
-                if($stock[0]->qte > 0){
-                    $produits[] = $produit; 
+        if (!Gate::denies('ecom')) {
+            $produits_total = Produit::where('user_id', Auth::user()->id)->get();
+            foreach ($produits_total as $produit) {
+                $stock = DB::table('stocks')->where('produit_id', $produit->id)->get();
+                if ($stock[0]->qte > 0) {
+                    $produits[] = $produit;
                 }
             }
             //dd($produits);
         }
 
-        if(!Gate::denies('ramassage-commande')) {
+        if (!Gate::denies('ramassage-commande')) {
             //session administrateur donc on affiche tous les commandes
-            $total = DB::table('commandes')->where('deleted_at',NULL)->where('facturer',$id)->count();
-            $commandes= DB::table('commandes')->where('deleted_at',NULL)->where('facturer',$id)->orderBy('created_at', 'DESC')->paginate(10);
+            $total = DB::table('commandes')->where('deleted_at', NULL)->where('facturer', $id)->count();
+            $commandes = DB::table('commandes')->where('deleted_at', NULL)->where('facturer', $id)->orderBy('created_at', 'DESC')->get();
             //dd($commandes);
 
             //dd($clients[0]->id);
-        }
-        else{
-            $commandes= DB::table('commandes')->where('deleted_at',NULL)->where('facturer',$id)->where('user_id',Auth::user()->id )->orderBy('created_at', 'DESC')->paginate(10);
-            $total =DB::table('commandes')->where('deleted_at',NULL)->where('facturer',$id)->where('user_id',Auth::user()->id )->count();
-            
-           //dd("salut");
+        } else {
+            $commandes = DB::table('commandes')->where('deleted_at', NULL)->where('facturer', $id)->where('user_id', Auth::user()->id)->orderBy('created_at', 'DESC')->get();
+            $total = DB::table('commandes')->where('deleted_at', NULL)->where('facturer', $id)->where('user_id', Auth::user()->id)->count();
+
+            //dd("salut");
         }
 
-      
-            foreach($commandes as $commande){
-                if(!empty(User::find($commande->user_id)))
-                $users[] =  User::find($commande->user_id) ;
-            }
+
+        foreach ($commandes as $commande) {
+            if (!empty(User::find($commande->user_id)))
+                $users[] =  User::find($commande->user_id);
+        }
         //$commandes = Commande::all()->paginate(3) ;
-        return view('commande.colis',['commandes' => $commandes, 
-                                    'total'=>$total,
-                                    'users'=> $users,
-                                    'clients' => $clients,
-                                    'produits'=>$produits,
-                                    'data' => $data]);
-   }
+        return view('commande.colis', [
+            'commandes' => $commandes,
+            'total' => $total,
+            'users' => $users,
+            'clients' => $clients,
+            'produits' => $produits,
+            'data' => $data
+        ]);
+    }
 
-   public function infos($id){
-        $clients = [];  
-        $users = []; 
-        if(!Gate::denies('ramassage-commande')) {
-            $factures = DB::table('factures')->where('id',$id)->get();
-            $clients = User::whereHas('roles', function($q){$q->whereIn('name', ['client', 'ecom']);})->get();
-        }
-        else{
-            $factures = DB::table('factures')->where('user_id',Auth::user()->id)->where('id',$id)->get();
-
+    public function infos($id)
+    {
+        $clients = [];
+        $users = [];
+        if (!Gate::denies('ramassage-commande')) {
+            $factures = DB::table('factures')->where('id', $id)->get();
+            $clients = User::whereHas('roles', function ($q) {
+                $q->whereIn('name', ['client', 'ecom']);
+            })->get();
+        } else {
+            $factures = DB::table('factures')->where('user_id', Auth::user()->id)->where('id', $id)->get();
         }
         $total = $factures->count();
 
-        foreach($factures as $facture){
-            if(!empty(User::find($facture->user_id)))
-            $users[] =  User::find($facture->user_id) ;
+        foreach ($factures as $facture) {
+            if (!empty(User::find($facture->user_id)))
+                $users[] =  User::find($facture->user_id);
         }
-        if($total > 0){
+        if ($total > 0) {
             //dd($factures);
-            return view('facture',['factures'=>$factures ,
-                                    'total' => $total,
-                                    'users'=> $users,
-                                    'clients' => $clients]);
-        }
-        else{
+            return view('facture', [
+                'factures' => $factures,
+                'total' => $total,
+                'users' => $users,
+                'clients' => $clients
+            ]);
+        } else {
             return redirect()->route('facture.index');
         }
-   }
-
+    }
 }

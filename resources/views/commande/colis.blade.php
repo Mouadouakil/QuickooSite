@@ -7,6 +7,10 @@
 
 
 @section('style')
+
+<link rel="stylesheet" href="{{ url('/vendor/css/vendor.bundle.addons.css') }}">
+<link rel="stylesheet" href="{{ url('/vendor/css/vendor.bundle.addons.css') }}">
+
     <style>
 
         .dropdown.dropdown-lg .dropdown-menu {
@@ -36,6 +40,9 @@
             border-top-left-radius: 4px;
             border-bottom-left-radius: 4px;
         }
+        .sidebar-nav ul .sidebar-item {
+            width: auto !important;
+        }
 
         @media screen and (min-width: 768px) {
             #adv-search {
@@ -53,7 +60,7 @@
             color: #e85f03 !important;
         }
         .page-item.active .page-link {
-            
+
             background-color: #e85f03 !important;
             border-color: #e85f03 !important;
             color: #fff !important;
@@ -78,7 +85,7 @@
         </div>
         <div class="col-7">
         <div class="row float-right d-flex ">
-            <div class=m-r-5" style="margin-right: 10px;">
+            <div class="m-r-5" style="margin-right: 10px;">
                 <a  class="btn btn-warning text-white"  data-toggle="modal" data-target="#modalSearchForm"><i class="fa fa-search"></i></a>
             </div>
             @can('client-admin')
@@ -137,8 +144,8 @@
             <button type="button" class="close" data-dismiss="alert">&times;</button>
         <strong>Attention !</strong>vous ne pouvez pas changer le statut La commande numero {{session()->get('noedit')}}
           </div>
-        @endif 
-      
+        @endif
+
         @if (session()->has('nonExpidie'))
         <div class="alert alert-dismissible alert-danger col-12">
             <button type="button" class="close" data-dismiss="alert">&times;</button>
@@ -158,14 +165,22 @@
                 <div class="card-body">
                     <h4 class="card-title">Gestion des comandes / colis</h4>
                     <h6 class="card-subtitle">Nombre total des commandes : <code>{{$total}} Commandes</code> .</h6>
-                    <input class="form-control" id="myInput" type="text" placeholder="Rechercher..">
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover table-bordered" style="font-size: 0.72em;">
+                    <form method="GET" action="{{route('facture.storeBySelect')}}">
+                        @csrf
+                        <input type="hidden" name="livreur" value="2">
+                        <button style="margin: 20px;" type="submit" class="btn btn-primary">Générer une facture</button>
+
+                    <table  style="font-size: 0.72em;" id="order-listing"  class="table table-hover">
                         <thead>
                             <tr>
                                 @can('ramassage-commande')
-                                <th scope="col">Client</th>
+                                    <th  class="bs-checkbox " style="width: 36px; " data-field="state"><div class="th-inner "><label>
+                                        <input  id="check_bl" onclick="checkFunction()" name="btSelectAll" type="checkbox">
+                                        </label></div>
+                                    </th>
+                                    <th scope="col">Client</th>
                                 @endcan
                                 <th scope="col">Numero Commande</th>
                                 <th scope="col">Nom Complet</th>
@@ -177,16 +192,26 @@
                                 <th scope="col">Date</th>
                                 <th scope="col">Statut</th>
                                 <th scope="col">Ticket</th>
-                                
+
                             </tr>
                         </thead>
                         <tbody id="myTable">
+
                            @forelse ($commandes as $index => $commande)
                            <tr>
                             @can('ramassage-commande')
+
+                                    <td class="bs-checkbox " style="width: 36px; "><label>
+
+                                            <input value="{{$commande->id}}" class="cb" name="btSelectItem[]" type="checkbox">
+                                            <span></span>
+                                            </label>
+
+
+                                    </td>
                             <th scope="row">
-                                <a title="{{$users[$index]->name}}" class=" text-muted waves-effect waves-dark pro-pic" 
-                                       
+                                <a title="{{$users[$index]->name}}" class=" text-muted waves-effect waves-dark pro-pic"
+
                                             @can('edit-users')
                                                 href="{{route('admin.users.edit',$users[$index]->id)}}"
                                             @endcan
@@ -197,26 +222,25 @@
                             </th>
                             @endcan
                             <th scope="row">
-                                
+
                                 @if ($commande->facturer != 0)
-                                
-                                    <a href="{{route('facture.infos',$commande->facturer)}}" style="color: white; background-color: #e85f03" 
-                                    class="badge badge-pill" > 
-                                    <span style="font-size: 1.25em">Facturée</span> 
+
+                                    <a href="{{route('facture.infos',$commande->facturer)}}" style="color: white; background-color: #e85f03"
+                                    class="badge badge-pill" >
+                                    <span style="font-size: 1.25em">Facturée</span>
                                     </a>
                                     <br>
                                 @else
                                     @if ($commande->traiter != 0)
-                                    
-                                    <a href="{{route('bon.infos',$commande->traiter)}}" style="color: white" 
-                                    class="badge badge-pill badge-dark"> 
-                                    <span style="font-size: 1.25em">Bon livraison</span> 
+                                    <a href="{{route('bon.infos',$commande->traiter)}}" style="color: white"
+                                    class="badge badge-pill badge-dark">
+                                    <span style="font-size: 1.25em">Bon livraison</span>
                                     </a>
                                     <br>
                                     @endif
                                 @endif
                                 {{$commande->numero}}
-                            
+
                             </th>
                             <td>{{$commande->nom}}</td>
                             <td>{{$commande->telephone}}</td>
@@ -228,18 +252,18 @@
                             <td> <i class="far fa-credit-card"></i> CARD PAYMENT
                             </td>
                             @endif
-                           
+
                             <td>{{$commande->prix}} MAD</td>
                             <td>{{$commande->created_at}}</td>
                             <td>
-                                
-                                <a  style="color: white" 
-                                    class="badge badge-pill 
+
+                                <a  style="color: white"
+                                    class="badge badge-pill
                                     @switch($commande->statut)
                                     @case("expidié")
                                     badge-warning"
                                     @can('ramassage-commande')
-                                    title="Rammaser la commande" 
+                                    title="Rammaser la commande"
                                      href="{{ route('commandeStatut',['id'=> $commande->id]) }}"
                                     @endcan
                                         @break
@@ -247,38 +271,38 @@
                                     @case("Reporté")
                                     badge-info"
                                         @if ($commande->traiter > 0)
-                                        title="Voir le bon de livraison" 
+                                        title="Voir le bon de livraison"
                                         href="{{route('bon.gen',$commande->traiter)}}"
                                         target="_blank"
                                         @else
-                                        title="Générer le bon de livraison" 
+                                        title="Générer le bon de livraison"
                                         href="{{route('bonlivraison.index')}}"
                                         @endif
-                                        
+
                                         @break
                                     @case("Livré")
                                     badge-success"
                                     @if ($commande->facturer > 0)
-                                        title="Voir la facture" 
+                                        title="Voir la facture"
                                         href="{{route('facture.gen',$commande->facturer)}}"
                                         target="_blank"
                                         @else
-                                        title="Générer la facture" 
+                                        title="Générer la facture"
                                         href="{{route('facture.index')}}"
                                         @endif
                                         @break
                                     @default
                                     badge-danger"
                                 @endswitch
-                                    
-                                     > 
-                                     <span style="font-size: 1.25em">{{$commande->statut}}</span> 
+                                "
+                                     >
+                                     <span style="font-size: 1.25em">{{$commande->statut}}</span>
                                 </a>
-                                <br> 
+                                <br>
                                 @if ($commande->statut == "Reporté" )
                                 Pour le: <br>{{$commande->postponed_at}}
                                 @else
-                                ({{\Carbon\Carbon::parse($commande->updated_at)->diffForHumans()}}) 
+                                ({{\Carbon\Carbon::parse($commande->updated_at)->diffForHumans()}})
 
                                 @endif
                             </td>
@@ -288,15 +312,15 @@
                         <tr>
                             <td colspan="10" style="text-align: center">Aucune commande enregistrée!</td>
                         </tr>
-                        
+
                            @endforelse
-                         
+
                         </tbody>
-                        
+
                     </table>
+                </form>
                     <div class="row">
                         <div class="col-12 d-flex justify-content-center">
-                           {{$commandes ->appends($data)-> links()}}
                         </div>
                     </div>
                 </div>
@@ -307,7 +331,7 @@
 </div>
 
 
-<div class="container my-4">    
+<div class="container my-4">
     <div class="modal fade" id="modalSearchForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
                     aria-hidden="true">
                     <div class="modal-dialog" role="document">
@@ -332,13 +356,13 @@
                                             {{$client->name}}
                                         </option>
                                             @endforeach
-                                           
+
                                         </select>
-                                        
+
                                     </div>
                                 </div>
                                 @endcan
-                                
+
                                 <div class="form-group row">
                                     <label class="col-md-4">Nom et Prénom:</label>
                                     <div class="col-md-8">
@@ -405,16 +429,16 @@
                                       <input class="form-control" name="facturer" type="checkbox" value="1" id="facture">
                                     </div>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <div class="modal-footer d-flex justify-content-center">
                                         <button type="submit" class="btn btn-warning"><i class="fa fa-search"></i> Rechercher</button>
-                                        
+
                                     </div>
                                 </div>
                             </form>
                         </div>
-            
+
                       </div>
                     </div>
     </div>
@@ -423,7 +447,7 @@
 
 
 
-<div class="container my-4">    
+<div class="container my-4">
     @can('manage-users')
     <div class="modal fade" id="modalSubscriptionForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
                     aria-hidden="true">
@@ -448,9 +472,9 @@
                                             {{$client->name}}
                                         </option>
                                             @endforeach
-                                           
+
                                         </select>
-                                        
+
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -465,7 +489,7 @@
                                         <input  value="{{ old('nom') }}" name="nom" type="text" placeholder="Nom & Prénom" class="form-control form-control-line">
                                     </div>
                                 </div>
-                               
+
                                 <div class="row">
                                     <div class="form-group col-md-4">
                                         <label for="example-email" class="col-md-12">Nombre de Colis :</label>
@@ -473,8 +497,8 @@
                                             <input  value="{{ old('colis') }}" type="number" class="form-control form-control-line" name="colis" id="example-email">
                                         </div>
                                     </div>
-    
-    
+
+
                                     <fieldset class="form-group col-md-4">
                                         <div class="row">
                                           <legend class="col-form-label  pt-0">Poids :</legend>
@@ -491,7 +515,7 @@
                                                 P. Volumineux
                                               </label>
                                             </div>
-                                        
+
                                           </div>
                                         </div>
                                       </fieldset>
@@ -511,20 +535,20 @@
                                                 Card payment
                                               </label>
                                             </div>
-                                        
+
                                           </div>
                                         </div>
                                       </fieldset>
-    
+
                                       <div class="form-group col-md-12" id="montant" style="display: block">
                                         <label for="example-email" class="col-md-12">Montant (MAD) :</label>
                                         <div class="col-md-12">
                                             <input  value="{{ old('montant') }}" type="number" class="form-control form-control-line" name="montant" id="example-email">
                                         </div>
                                     </div>
-                                    
+
                                 </div>
-                
+
                                 <div class="form-group">
                                     <label class="col-md-12">Téléphone :</label>
                                     <div class="col-md-12">
@@ -554,7 +578,7 @@
                                     <label class="col-sm-12">Secteur :</label>
                                     <div class="col-sm-12">
                                       <select  value="{{ old('secteur') }}" name="secteur" class="form-control form-control-line" required>
-  
+
                                           <option value="">Tous les secteurs</option>
                                               <option>Aviation</option>
                                               <option>Al Kasaba</option>
@@ -673,7 +697,7 @@
                                 <div class="form-group">
                                     <div class="modal-footer d-flex justify-content-center">
                                         <button class="btn btn-danger">Ajouter</button>
-                                        
+
                                     </div>
                                 </div>
                             </form>
@@ -690,7 +714,7 @@
                               </div>
                               @endif
                         </div>
-            
+
                       </div>
                     </div>
     </div>
@@ -700,8 +724,8 @@
 
 
 @can('ecom')
-<div class="container my-4">    
-  
+<div class="container my-4">
+
   <div class="modal fade" id="modalSubscriptionForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
                   aria-hidden="true">
                   <div class="modal-dialog" role="document">
@@ -717,10 +741,10 @@
                               @csrf
 
                               <div id="education_fields">
-          
+
                               </div>
                                 <div class="row" id="test">
-                                  
+
                                     <div class="form-group col-md-6">
                                       <label for="produit" class="col-sm-12">Produit :</label>
                                       <div class="col-md-12">
@@ -731,19 +755,19 @@
                                             {{$produit->libelle  .' '.$produit->reference}}
                                         </option>
                                               @endforeach
-                                             
+
                                           </select>
-                                        </div> 
+                                        </div>
                                       </div>
-                                      
+
                                       <div class="form-group col-md-4 input-group">
                                         <label for="qte" class="col-md-12">Quantité:</label>
                                         <div class="col-md-12">
                                             <input  value="{{ old('qte') }}" type="number" class="form-control form-control-line" name="qte[]" id="qte" required>
                                         </div>
-                                        
+
                                     </div>
-                                  
+
                                 </div>
                                 <div class="input-group-btn col-md-2" style="position: relative; left:350px; top:-55px">
                                   <button class="btn btn-success " type="button"  onclick="education_fields();"> <span class="mdi mdi-library-plus" aria-hidden="true"></span> </button>
@@ -760,7 +784,7 @@
                                       <input  value="{{ old('nom') }}" name="nom" type="text" placeholder="Nom & Prénom" class="form-control form-control-line" required>
                                   </div>
                               </div>
-                             
+
                               <div class="row form-group ">
                                   <div class="form-group col-md-4">
                                       <label for="qte" class="col-md-12">Nombre de Colis :</label>
@@ -768,8 +792,8 @@
                                           <input  value="{{ old('colis') }}" type="number" class="form-control form-control-line" name="colis" id="qte" required>
                                       </div>
                                   </div>
-  
-  
+
+
                                   <fieldset class="form-group col-md-4">
                                       <div class="row">
                                         <legend class="col-form-label  pt-0">Poids :</legend>
@@ -786,11 +810,11 @@
                                               P. Volumineux
                                             </label>
                                           </div>
-                                      
+
                                         </div>
                                       </div>
                                     </fieldset>
-  
+
                                     <fieldset class="form-group col-md-4">
                                       <div class="row">
                                         <legend class="col-form-label  pt-0">Mode de paiement :</legend>
@@ -807,15 +831,15 @@
                                               Card payment
                                             </label>
                                           </div>
-                                      
+
                                         </div>
                                       </div>
                                     </fieldset>
-  
-                                
-                                  
+
+
+
                               </div>
-              
+
                               <div class="form-group">
                                   <label class="col-md-12">Téléphone :</label>
                                   <div class="col-md-12">
@@ -964,7 +988,7 @@
                               <div class="form-group">
                                   <div class="modal-footer d-flex justify-content-center">
                                       <button class="btn btn-danger">Ajouter</button>
-                                      
+
                                   </div>
                               </div>
                           </form>
@@ -981,11 +1005,11 @@
                             </div>
                             @endif
                       </div>
-          
+
                     </div>
                   </div>
   </div>
- 
+
 </div>
 @endcan
 
@@ -1004,21 +1028,12 @@
             });
         </script>
     @endif
-    <script>
-        $(document).ready(function(){
-          $("#myInput").on("keyup", function() {
-            var value = $(this).val().toLowerCase();
-            $("#myTable tr").filter(function() {
-              $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-            });
-          });
-        });
-        </script>
+
 
 <script>
     var room = 1;
     function education_fields() {
-    
+
         room++;
         var objTo = document.getElementById('education_fields')
         var divtest = document.createElement("div");
@@ -1026,7 +1041,7 @@
         var rdiv = 'removeclass'+room;
 
         divtest.innerHTML  = $("#test").html() + '<div class="input-group-btn"> <button class="btn btn-danger m-t-25" type="button" onclick="remove_education_fields('+ room +');"> <span class="mdi mdi-close-box" aria-hidden="true"></span> </button></div></div></div></div><div class="clear"></div>';
-        
+
         objTo.appendChild(divtest)
     }
     function remove_education_fields(rid) {
@@ -1034,4 +1049,31 @@
     }
 
 </script>
+<script>
+
+    function checkFunction(){
+
+        var cbp = document.getElementById('check_bl');
+        if (cbp.checked == true){
+            var cbs = document.querySelectorAll('.cb');
+            cbs.forEach((cb) => {
+                cb.checked = true;
+            });
+        } else {
+            var cbs = document.querySelectorAll('.cb');
+            cbs.forEach((cb) => {
+                cb.checked = false;
+            });
+        }
+        }
+
+    </script>
+
+        <!-- plugins:js -->
+        <script src="{{ url('vendor/js/vendor.bundle.base.js') }}"></script>
+        <script src="{{ url('vendor/js/vendor.bundle.addons.js') }}"></script>
+        <!-- endinject -->
+        <script src="{{ url('js/data-table.js') }}"></script>
+
+
 @endsection
